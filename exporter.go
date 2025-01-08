@@ -30,6 +30,31 @@ var (
 		Help: "Monitoring janus subscribers",
 	}, []string{})
 
+	packetsInInt  int
+	packetsOutInt int
+	bytesInInt    int
+	bytesOutInt   int
+
+	packetsIn = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "janus_packets_in",
+		Help: "Monitoring janus packets in",
+	}, []string{})
+
+	packetsOut = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "janus_packets_out",
+		Help: "Monitoring janus packets out",
+	}, []string{})
+
+	bytesIn = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "janus_bytes_in",
+		Help: "Monitoring janus bytes in",
+	}, []string{})
+
+	bytesOut = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "janus_bytes_out",
+		Help: "Monitoring janus bytes out",
+	}, []string{})
+
 	dynamicIPListMu sync.Mutex
 	dynamicIPList   = make(map[string]int)
 	ipList          = prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -57,6 +82,10 @@ func recordMetrics() {
 
 			handlersCounterInt = 0
 			subscribersCounterInt = 0
+			packetsInInt = 0
+			packetsOutInt = 0
+			bytesInInt = 0
+			bytesOutInt = 0
 			dynamicIPList = make(map[string]int)
 			ipList.Reset()
 
@@ -74,9 +103,13 @@ func recordMetrics() {
 						if s.PluginSpecific.Bitrate != 0 {
 							for _, stream := range s.PluginSpecific.Streams {
 								subscribersCounterInt += stream.Subscribers // Counting subscribers
-								if stream.Subscribers > 0 {
-									s.WebRTC.ICE.SelectedPair = strings.Replace(strings.Split(strings.Split(s.WebRTC.ICE.SelectedPair, "<->")[1], ":")[0], " ", "", -1)
-									AddIP(s.WebRTC.ICE.SelectedPair)
+								s.WebRTC.ICE.SelectedPair = strings.Replace(strings.Split(strings.Split(s.WebRTC.ICE.SelectedPair, "<->")[1], ":")[0], " ", "", -1)
+								AddIP(s.WebRTC.ICE.SelectedPair)
+								packetsInInt += s.WebRTC.DTLS.STATS.IN.Packets
+								packetsOutInt += s.WebRTC.DTLS.STATS.OUT.Packets
+								bytesInInt += s.WebRTC.DTLS.STATS.IN.Bytes
+								bytesOutInt += s.WebRTC.DTLS.STATS.OUT.Bytes
+								if s.WebRTC.ICE.SelectedPair != "" {
 									fmt.Println(s)
 								}
 							}
@@ -89,7 +122,10 @@ func recordMetrics() {
 
 			handlersCounter.WithLabelValues().Set(float64(handlersCounterInt))
 			subscribersCounter.WithLabelValues().Set(float64(subscribersCounterInt))
-
+			packetsIn.WithLabelValues().Set(float64(packetsInInt))
+			packetsOut.WithLabelValues().Set(float64(packetsOutInt))
+			bytesIn.WithLabelValues().Set(float64(bytesInInt))
+			bytesOut.WithLabelValues().Set(float64(bytesOutInt))
 			dynamicIPListMu.Lock()
 			for ip, count := range dynamicIPList {
 				ipList.With(prometheus.Labels{"ip": ip}).Set(float64(count))
@@ -106,6 +142,11 @@ func init() {
 	prometheus.MustRegister(handlersCounter)
 	prometheus.MustRegister(subscribersCounter)
 	prometheus.MustRegister(ipList)
+
+	prometheus.MustRegister(packetsIn)
+	prometheus.MustRegister(packetsOut)
+	prometheus.MustRegister(bytesIn)
+	prometheus.MustRegister(bytesOut)
 }
 
 var (
