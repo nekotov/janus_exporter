@@ -18,17 +18,12 @@ type Stats struct {
 	Bytes   int `json:"bytes"`
 }
 
-type SelectedPair struct {
-	Local  string `json:"local"`
-	Remote string `json:"remote"`
-}
-
 type Stream struct {
-	Type        string `json:"type"`
-	MIndex      int    `json:"mindex"`
-	Mid         string `json:"mid"`
-	Codec       string `json:"codec"`
-	Subscribers int    `json:"subscribers"`
+	Type string `json:"type"`
+	//MIndex      int    `json:"mindex"`
+	//Mid         string `json:"mid"`
+	//Codec       string `json:"codec"`
+	Subscribers int `json:"subscribers"`
 }
 
 type PluginSpecific struct {
@@ -146,32 +141,3 @@ func getJanusHandlerInfo(host string, token string, session int64, handler int64
 
 	return response.JanusSes
 }
-
-//sessions := getJanusSessionsList(janusHost, janusAdminToken)
-////	//var wg sync.WaitGroup
-////	//var mu sync.Mutex
-////
-////	for _, session := range sessions {
-////		handlers := getJanusHandlersList(janusHost, janusAdminToken, session)
-////		for _, handler := range handlers {
-////			//wg.Add(100)
-////			go func(session int64, handler int64) {
-////				//defer wg.Done()
-////				s := getJanusHandlerInfo(janusHost, janusAdminToken, session, handler)
-////				//if s.PluginSpecific.Bitrate != 0 {
-////				//	for _, stream := range s.PluginSpecific.Streams {
-////				//		if stream.Subscribers > 0 {
-////				//			//mu.Lock()
-////				//			s.WebRTC.ICE.SelectedPair = strings.Split(strings.Split(s.WebRTC.ICE.SelectedPair, "<->")[1], ":")[0]
-////				//			fmt.Println(s)
-////				//			//mu.Unlock()
-////				//			break
-////				//		}
-////				//	}
-////				//}
-////				fmt.Println(s)
-////			}(session, handler)
-////		}
-////	}
-////
-////	//wg.Wait()
