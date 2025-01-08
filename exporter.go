@@ -103,7 +103,9 @@ func recordMetrics() {
 						if s.PluginSpecific.Bitrate != 0 {
 							for _, stream := range s.PluginSpecific.Streams {
 								subscribersCounterInt += stream.Subscribers // Counting subscribers
-								s.WebRTC.ICE.SelectedPair = strings.Replace(strings.Split(strings.Split(s.WebRTC.ICE.SelectedPair, "<->")[1], ":")[0], " ", "", -1)
+								if s.WebRTC.ICE.SelectedPair != "" {
+									s.WebRTC.ICE.SelectedPair = strings.Replace(strings.Split(strings.Split(s.WebRTC.ICE.SelectedPair, "<->")[1], ":")[0], " ", "", -1)
+								}
 								AddIP(s.WebRTC.ICE.SelectedPair)
 								packetsInInt += s.WebRTC.DTLS.STATS.IN.Packets
 								packetsOutInt += s.WebRTC.DTLS.STATS.OUT.Packets
