@@ -24,6 +24,12 @@ var (
 		Help: "Monitoring janus handlers",
 	}, []string{})
 
+	subscribersCounterInt int
+	subscribersCounter    = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "janus_subscribers",
+		Help: "Monitoring janus subscribers",
+	}, []string{})
+
 	dynamicIPListMu sync.Mutex
 	dynamicIPList   = make(map[string]int)
 	ipList          = prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -50,6 +56,7 @@ func recordMetrics() {
 		for {
 
 			handlersCounterInt = 0
+			subscribersCounterInt = 0
 			dynamicIPList = make(map[string]int)
 			ipList.Reset()
 
@@ -66,11 +73,11 @@ func recordMetrics() {
 						s := getJanusHandlerInfo(janusHost, janusAdminToken, session, handler)
 						if s.PluginSpecific.Bitrate != 0 {
 							for _, stream := range s.PluginSpecific.Streams {
+								subscribersCounterInt += stream.Subscribers // Counting subscribers
 								if stream.Subscribers > 0 {
 									s.WebRTC.ICE.SelectedPair = strings.Replace(strings.Split(strings.Split(s.WebRTC.ICE.SelectedPair, "<->")[1], ":")[0], " ", "", -1)
 									AddIP(s.WebRTC.ICE.SelectedPair)
 									fmt.Println(s)
-									break
 								}
 							}
 						}
@@ -81,6 +88,7 @@ func recordMetrics() {
 			wg.Wait()
 
 			handlersCounter.WithLabelValues().Set(float64(handlersCounterInt))
+			subscribersCounter.WithLabelValues().Set(float64(subscribersCounterInt))
 
 			dynamicIPListMu.Lock()
 			for ip, count := range dynamicIPList {
@@ -96,6 +104,7 @@ func recordMetrics() {
 func init() {
 	prometheus.MustRegister(sessionsCounter)
 	prometheus.MustRegister(handlersCounter)
+	prometheus.MustRegister(subscribersCounter)
 	prometheus.MustRegister(ipList)
 }
 

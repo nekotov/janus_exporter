@@ -8,22 +8,9 @@ import (
 	"strconv"
 )
 
-type SessionStats struct {
-	In  Stats `json:"in"`
-	Out Stats `json:"out"`
-}
-
-type Stats struct {
-	Packets int `json:"packets"`
-	Bytes   int `json:"bytes"`
-}
-
 type Stream struct {
-	Type string `json:"type"`
-	//MIndex      int    `json:"mindex"`
-	//Mid         string `json:"mid"`
-	//Codec       string `json:"codec"`
-	Subscribers int `json:"subscribers"`
+	Type        string `json:"type"`
+	Subscribers int    `json:"subscribers"`
 }
 
 type PluginSpecific struct {
@@ -31,20 +18,27 @@ type PluginSpecific struct {
 	Streams []Stream `json:"streams"`
 }
 
+type IOStats struct {
+	Packets int `json:"packets"`
+	Bytes   int `json:"bytes"`
+}
+
 type WebRTC struct {
 	ICE struct {
 		SelectedPair string `json:"selected-pair"`
 	} `json:"ice"`
 	DTLS struct {
-		Stat Stats `json:"stats"`
+		STATS struct {
+			IN  IOStats `json:"in"`
+			OUT IOStats `json:"out"`
+		}
 	} `json:"dtls"`
 }
 
 type JanusSession struct {
 	Plugin         string         `json:"plugin"`
 	PluginSpecific PluginSpecific `json:"plugin_specific"`
-	WebRTC         WebRTC         `json:"webrtc"`
-	Stats          SessionStats   `json:"stats"`
+	WebRTC         WebRTC         `json:"webrtc,omitempty"`
 }
 
 type ResponseHandlers struct {
