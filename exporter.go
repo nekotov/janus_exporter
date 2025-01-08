@@ -91,6 +91,7 @@ func recordMetrics() {
 
 			sessions := getJanusSessionsList(janusHost, janusAdminToken)
 			var wg sync.WaitGroup
+			var mu sync.Mutex
 
 			for _, session := range sessions {
 				handlers := getJanusHandlersList(janusHost, janusAdminToken, session)
@@ -106,11 +107,13 @@ func recordMetrics() {
 								if s.WebRTC.ICE.SelectedPair != "" {
 									s.WebRTC.ICE.SelectedPair = strings.Replace(strings.Split(strings.Split(s.WebRTC.ICE.SelectedPair, "<->")[1], ":")[0], " ", "", -1)
 								}
+								mu.Lock()
 								AddIP(s.WebRTC.ICE.SelectedPair)
 								packetsInInt += s.WebRTC.DTLS.STATS.IN.Packets
 								packetsOutInt += s.WebRTC.DTLS.STATS.OUT.Packets
 								bytesInInt += s.WebRTC.DTLS.STATS.IN.Bytes
 								bytesOutInt += s.WebRTC.DTLS.STATS.OUT.Bytes
+								mu.Unlock()
 								if s.WebRTC.ICE.SelectedPair != "" {
 									fmt.Println(s)
 								}
