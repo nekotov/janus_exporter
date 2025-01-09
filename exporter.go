@@ -107,8 +107,8 @@ func recordMetrics() {
 								if s.WebRTC.ICE.SelectedPair != "" {
 									s.WebRTC.ICE.SelectedPair = strings.Replace(strings.Split(strings.Split(s.WebRTC.ICE.SelectedPair, "<->")[1], ":")[0], " ", "", -1)
 								}
-								mu.Lock()
 								AddIP(s.WebRTC.ICE.SelectedPair)
+								mu.Lock()
 								packetsInInt += s.WebRTC.DTLS.STATS.IN.Packets
 								packetsOutInt += s.WebRTC.DTLS.STATS.OUT.Packets
 								bytesInInt += s.WebRTC.DTLS.STATS.IN.Bytes
