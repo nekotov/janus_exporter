@@ -16,4 +16,4 @@ COPY --from=builder /app/exporter .
 
 EXPOSE 8090
 
-CMD ["./exporter"]
+ENTRYPOINT ["./exporter"]
