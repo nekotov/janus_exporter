@@ -8,6 +8,12 @@ This is a simple Prometheus exporter for Janus WebRTC Gateway. It uses the Janus
 janus_exporter -h
 ```
 
+## Docker
+
+```bash
+podman run --net="host" ghcr.io/nekotov/janus_exporter/exporter:v0.0.1
+```
+
 ## Metrics
 
 - janus_sessions
