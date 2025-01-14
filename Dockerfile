@@ -1,4 +1,8 @@
+# Build Stage
 FROM golang:1.22-alpine as builder
+
+# Set architecture environment variable
+ARG ARCH=amd64
 
 WORKDIR /app
 
@@ -6,8 +10,10 @@ COPY . .
 
 RUN go mod tidy
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o exporter .
+# Build for dynamic architecture (default: amd64)
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=$ARCH go build -ldflags="-w -s" -o exporter .
 
+# Final image stage
 FROM alpine:latest
 
 WORKDIR /app
