@@ -1,4 +1,4 @@
-module janus_exporter
+module github.com/nekotov/janus_exporter
 
 go 1.22
 
