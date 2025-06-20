@@ -2,14 +2,12 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log"
 	"net/http"
 	"strings"
 	"sync"
-	"time"
 )
 
 var (
@@ -70,76 +68,63 @@ func AddIP(ip string) {
 }
 
 func recordMetrics() {
-	go func() {
-		for {
-			sessionsCounter.WithLabelValues().Set(getJanusSessionsCount(janusHost, janusAdminToken))
-			time.Sleep(time.Second * 5)
-		}
-	}()
+	sessions := getJanusSessionsList(janusHost, janusAdminToken)
 
-	go func() {
-		for {
+	sessionsCounter.WithLabelValues().Set(float64(len(sessions)))
 
-			handlersCounterInt = 0
-			subscribersCounterInt = 0
-			packetsInInt = 0
-			packetsOutInt = 0
-			bytesInInt = 0
-			bytesOutInt = 0
-			dynamicIPList = make(map[string]int)
-			ipList.Reset()
+	handlersCounterInt = 0
+	subscribersCounterInt = 0
+	packetsInInt = 0
+	packetsOutInt = 0
+	bytesInInt = 0
+	bytesOutInt = 0
+	dynamicIPList = make(map[string]int)
+	ipList.Reset()
 
-			sessions := getJanusSessionsList(janusHost, janusAdminToken)
-			var wg sync.WaitGroup
-			var mu sync.Mutex
+	var wg sync.WaitGroup
+	var mu sync.Mutex
 
-			for _, session := range sessions {
-				handlers := getJanusHandlersList(janusHost, janusAdminToken, session)
-				handlersCounterInt += len(handlers) // Counting handlers
-				for _, handler := range handlers {
-					wg.Add(1)
-					go func(session int64, handler int64) {
-						defer wg.Done()
-						s := getJanusHandlerInfo(janusHost, janusAdminToken, session, handler)
-						if s.PluginSpecific.Bitrate != 0 {
-							for _, stream := range s.PluginSpecific.Streams {
-								subscribersCounterInt += stream.Subscribers // Counting subscribers
-								if s.WebRTC.ICE.SelectedPair != "" {
-									s.WebRTC.ICE.SelectedPair = strings.Replace(strings.Split(strings.Split(s.WebRTC.ICE.SelectedPair, "<->")[1], ":")[0], " ", "", -1)
-								}
-								AddIP(s.WebRTC.ICE.SelectedPair)
-								mu.Lock()
-								packetsInInt += s.WebRTC.DTLS.STATS.IN.Packets
-								packetsOutInt += s.WebRTC.DTLS.STATS.OUT.Packets
-								bytesInInt += s.WebRTC.DTLS.STATS.IN.Bytes
-								bytesOutInt += s.WebRTC.DTLS.STATS.OUT.Bytes
-								mu.Unlock()
-								if s.WebRTC.ICE.SelectedPair != "" {
-									fmt.Println(s)
-								}
-							}
+	for _, session := range sessions {
+		handlers := getJanusHandlersList(janusHost, janusAdminToken, session)
+		handlersCounterInt += len(handlers) // Counting handlers
+		for _, handler := range handlers {
+			wg.Add(1)
+			go func(session int64, handler int64) {
+				defer wg.Done()
+				s := getJanusHandlerInfo(janusHost, janusAdminToken, session, handler)
+				if s.PluginSpecific.Bitrate != 0 {
+					for _, stream := range s.PluginSpecific.Streams {
+						subscribersCounterInt += stream.Subscribers // Counting subscribers
+						if s.WebRTC.ICE.SelectedPair != "" {
+							s.WebRTC.ICE.SelectedPair = strings.Replace(strings.Split(strings.Split(s.WebRTC.ICE.SelectedPair, "<->")[1], ":")[0], " ", "", -1)
 						}
-					}(session, handler)
+						AddIP(s.WebRTC.ICE.SelectedPair)
+						mu.Lock()
+						packetsInInt += s.WebRTC.DTLS.STATS.IN.Packets
+						packetsOutInt += s.WebRTC.DTLS.STATS.OUT.Packets
+						bytesInInt += s.WebRTC.DTLS.STATS.IN.Bytes
+						bytesOutInt += s.WebRTC.DTLS.STATS.OUT.Bytes
+						mu.Unlock()
+					}
 				}
-			}
-
-			wg.Wait()
-
-			handlersCounter.WithLabelValues().Set(float64(handlersCounterInt))
-			subscribersCounter.WithLabelValues().Set(float64(subscribersCounterInt))
-			packetsIn.WithLabelValues().Set(float64(packetsInInt))
-			packetsOut.WithLabelValues().Set(float64(packetsOutInt))
-			bytesIn.WithLabelValues().Set(float64(bytesInInt))
-			bytesOut.WithLabelValues().Set(float64(bytesOutInt))
-			dynamicIPListMu.Lock()
-			for ip, count := range dynamicIPList {
-				ipList.With(prometheus.Labels{"ip": ip}).Set(float64(count))
-			}
-			dynamicIPListMu.Unlock()
-
-			time.Sleep(time.Second * 30)
+			}(session, handler)
 		}
-	}()
+	}
+
+	wg.Wait()
+
+	handlersCounter.WithLabelValues().Set(float64(handlersCounterInt))
+	subscribersCounter.WithLabelValues().Set(float64(subscribersCounterInt))
+	packetsIn.WithLabelValues().Set(float64(packetsInInt))
+	packetsOut.WithLabelValues().Set(float64(packetsOutInt))
+	bytesIn.WithLabelValues().Set(float64(bytesInInt))
+	bytesOut.WithLabelValues().Set(float64(bytesOutInt))
+	dynamicIPListMu.Lock()
+	for ip, count := range dynamicIPList {
+		ipList.With(prometheus.Labels{"ip": ip}).Set(float64(count))
+	}
+	dynamicIPListMu.Unlock()
+
 }
 
 func init() {
@@ -161,18 +146,21 @@ var (
 	janusExporterPath = "/metrics"
 )
 
-func main() {
+func init() {
+	flag.StringVar(&janusHost, "janus-host", janusHost, "Janus host")
+	flag.StringVar(&janusAdminToken, "janus-admin-token", janusAdminToken, "Janus admin token")
+	flag.StringVar(&janusExporterHost, "janus-exporter-host", janusExporterHost, "Janus exporter host")
+	flag.StringVar(&janusExporterPath, "janus-exporter-path", janusExporterPath, "Janus exporter path")
+}
 
-	flag.String("janus-host", janusHost, "Janus host")
-	flag.String("janus-admin-token", janusAdminToken, "Janus admin token")
-	flag.String("janus-exporter-host", janusExporterHost, "Janus exporter host")
-	flag.String("janus-exporter-path", janusExporterPath, "Janus exporter path")
+func main() {
 	flag.Parse()
 
-	recordMetrics()
-
 	srv := http.NewServeMux()
-	srv.Handle(janusExporterPath, promhttp.Handler())
+	srv.Handle(janusExporterPath, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		recordMetrics()
+		promhttp.Handler().ServeHTTP(w, r)
+	}))
 	srv.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte(`<html>
 					<head><title>Janus Exporter</title></head>
